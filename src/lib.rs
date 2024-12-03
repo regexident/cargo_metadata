@@ -390,7 +390,7 @@ pub struct Package {
     pub targets: Vec<Target>,
     /// Features provided by the crate, mapped to the features required by that feature.
     #[cfg_attr(feature = "builder", builder(default))]
-    pub features: BTreeMap<String, Vec<String>>,
+    pub features: BTreeMap<String, Vec<FeatureDep>>,
     /// Path containing the `Cargo.toml`
     pub manifest_path: Utf8PathBuf,
     /// The [`categories` field](https://doc.rust-lang.org/cargo/reference/manifest.html#the-categories-field) as specified in the `Cargo.toml`
@@ -513,6 +513,77 @@ impl Package {
                 .unwrap_or(&self.manifest_path)
                 .join(file)
         })
+    }
+}
+
+/// Transitive feature of a crate's dependency.
+#[derive(Clone, Serialize, Deserialize, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[serde(transparent)]
+pub struct FeatureDep {
+    /// The underlying string representation of a feature.
+    pub repr: String,
+}
+
+impl FeatureDep {
+    /// Returns true if the feature is a dependency feature
+    /// (i.e. `"dep:<dependency>"`).
+    pub fn is_dependency(&self) -> bool {
+        self.repr.starts_with("dep:")
+    }
+
+    /// Returns true if the feature is a transitive feature of a dependency
+    /// (i.e. `"<dependency>/<feature>"` or `"<dependency>?/<feature>"`).
+    pub fn is_transitive(&self) -> bool {
+        self.repr.contains("/")
+    }
+
+    /// Returns true if the feature is a weak transitive feature of an optional dependency
+    /// (i.e. `"<dependency>?/<feature>"`).
+    pub fn is_weak(&self) -> bool {
+        self.repr.contains("?/")
+    }
+
+    /// Returns the name of the package dependency if the feature is a dependency feature
+    /// (i.e. `"dep:<package>"`, `"<package>/<feature>"` or `"<package>?/<feature>"`).
+    ///
+    /// Note: For dependency features without explicit `"dep:"` prefix this will return `None`.
+    pub fn package(&self) -> Option<String> {
+        if let Some(package) = self.repr.strip_prefix("dep:") {
+            return Some(package.to_owned());
+        }
+
+        if let Some((package, _)) = self.repr.split_once("/") {
+            if let Some(package) = package.strip_suffix("?") {
+                return Some(package.to_owned());
+            }
+
+            return Some(package.to_owned());
+        }
+
+        None
+    }
+
+    /// Returns the name of the feature if the feature is a dependency feature
+    /// (i.e. `"dep:<package>"`, `"<package>/<feature>"` or `"<package>?/<feature>"`).
+    ///
+    /// Note: For dependency features without explicit `"dep:"` prefix this will return
+    /// the optional dependency's implicit feature of the same name as the dependency.
+    pub fn feature(&self) -> Option<String> {
+        if self.repr.starts_with("dep:") {
+            return None;
+        }
+
+        if let Some((_, feature)) = self.repr.split_once("/") {
+            return Some(feature.to_owned());
+        }
+
+        Some(self.repr.clone())
+    }
+}
+
+impl fmt::Display for FeatureDep {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.repr, f)
     }
 }
 

@@ -6,13 +6,14 @@
 
 ### Added
 
-- n/a
+- Added richer API around feature dependencies by introduction of a `FeatureDep` wrapper type.
 
 ### Changed
 
 - Updated dependencies:
   - `thiserror` from `1.0.31` to `2.0.3`
   - `derive_builder` from `0.12` to `0.20`
+- Changed value type of `Package`'s `features` member from `Vec<String>` to `Vec<FeatureDep>`.
 
 ### Removed
 

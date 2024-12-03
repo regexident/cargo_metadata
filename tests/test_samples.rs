@@ -6,7 +6,7 @@ extern crate serde_json;
 use camino::Utf8PathBuf;
 use cargo_metadata::{
     workspace_default_members_is_missing, ArtifactDebuginfo, CargoOpt, DependencyKind, Edition,
-    Message, Metadata, MetadataCommand,
+    FeatureDep, Message, Metadata, MetadataCommand,
 };
 
 /// Output from oldest version ever supported (1.24).
@@ -353,13 +353,28 @@ fn all_the_fields() {
     if ver >= semver::Version::parse("1.60.0").unwrap() {
         // 1.60 now reports optional dependencies within the features table
         assert_eq!(all.features.len(), 4);
-        assert_eq!(all.features["bitflags"], vec!["dep:bitflags"]);
+        assert_eq!(
+            all.features["bitflags"],
+            vec![FeatureDep {
+                repr: "dep:bitflags".to_owned()
+            }]
+        );
     } else {
         assert_eq!(all.features.len(), 3);
     }
     assert_eq!(all.features["feat1"].len(), 0);
     assert_eq!(all.features["feat2"].len(), 0);
-    assert_eq!(sorted!(all.features["default"]), vec!["bitflags", "feat1"]);
+    assert_eq!(
+        sorted!(all.features["default"]),
+        vec![
+            FeatureDep {
+                repr: "bitflags".to_owned()
+            },
+            FeatureDep {
+                repr: "feat1".to_owned()
+            }
+        ]
+    );
 
     assert!(all.manifest_path.ends_with("all/Cargo.toml"));
     assert_eq!(all.categories, vec!["command-line-utilities"]);
@@ -642,6 +657,54 @@ fn advanced_feature_configuration() {
             .features(CargoOpt::AllFeatures)
     });
     assert_eq!(sorted!(all_flag_variants), sorted!(all_features));
+}
+
+#[test]
+fn feature_deps() {
+    let simple = FeatureDep {
+        repr: "feature".to_owned(),
+    };
+    assert!(!simple.is_dependency());
+    assert!(!simple.is_transitive());
+    assert!(!simple.is_weak());
+    assert_eq!(simple.package(), None);
+    assert_eq!(simple.feature().unwrap(), "feature");
+
+    let dependency_implicit = FeatureDep {
+        repr: "package".to_owned(),
+    };
+    assert!(!dependency_implicit.is_dependency());
+    assert!(!dependency_implicit.is_transitive());
+    assert!(!dependency_implicit.is_weak());
+    assert_eq!(dependency_implicit.package(), None);
+    assert_eq!(dependency_implicit.feature().unwrap(), "package");
+
+    let dependency_explicit = FeatureDep {
+        repr: "dep:package".to_owned(),
+    };
+    assert!(dependency_explicit.is_dependency());
+    assert!(!dependency_explicit.is_transitive());
+    assert!(!dependency_explicit.is_weak());
+    assert_eq!(dependency_explicit.package().unwrap(), "package");
+    assert_eq!(dependency_explicit.feature(), None);
+
+    let transitive_strong = FeatureDep {
+        repr: "package/feature".to_owned(),
+    };
+    assert!(!transitive_strong.is_dependency());
+    assert!(transitive_strong.is_transitive());
+    assert!(!transitive_strong.is_weak());
+    assert_eq!(transitive_strong.package().unwrap(), "package");
+    assert_eq!(transitive_strong.feature().unwrap(), "feature");
+
+    let transitive_weak = FeatureDep {
+        repr: "package?/feature".to_owned(),
+    };
+    assert!(!transitive_weak.is_dependency());
+    assert!(transitive_weak.is_transitive());
+    assert!(transitive_weak.is_weak());
+    assert_eq!(transitive_weak.package().unwrap(), "package");
+    assert_eq!(transitive_weak.feature().unwrap(), "feature");
 }
 
 #[test]
