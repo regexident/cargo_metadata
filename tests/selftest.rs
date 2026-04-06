@@ -87,9 +87,12 @@ fn error1() {
     let manifest_path = current_dir().unwrap().join("foo");
     let error = "error: the manifest-path must be a path to a Cargo.toml file";
     let error_with_path = format!("{error}: `{}`", manifest_path.display());
+    // FIXME: does no harm but get rid of `error` and `error_with_path` once
+    // MSRV reaches 1.95.
+    let unstable_error = "error: manifest path `foo` does not exist";
     match MetadataCommand::new().manifest_path("foo").exec() {
         Err(Error::CargoMetadata { stderr }) => {
-            assert!([error, &error_with_path].contains(&stderr.trim()))
+            assert!([error, &error_with_path, unstable_error].contains(&stderr.trim()))
         }
         _ => unreachable!(),
     }
