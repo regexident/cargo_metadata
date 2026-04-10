@@ -1118,8 +1118,11 @@ impl MetadataCommand {
     }
     /// Arbitrary command line flags to pass to `cargo`.  These will be added
     /// to the end of the command line invocation.
-    pub fn other_options(&mut self, options: impl Into<Vec<String>>) -> &mut MetadataCommand {
-        self.other_options = options.into();
+    pub fn other_options(
+        &mut self,
+        options: impl IntoIterator<Item: Into<String>>,
+    ) -> &mut MetadataCommand {
+        self.other_options = options.into_iter().map(Into::into).collect();
         self
     }
 
