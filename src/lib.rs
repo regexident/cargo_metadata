@@ -261,6 +261,20 @@ impl fmt::Display for PackageId {
     }
 }
 
+impl From<String> for PackageId {
+    fn from(repr: String) -> Self {
+        Self { repr }
+    }
+}
+
+impl<'a> From<&'a str> for PackageId {
+    fn from(repr: &'a str) -> Self {
+        Self {
+            repr: repr.to_owned(),
+        }
+    }
+}
+
 /// Helpers for default metadata fields
 fn is_null(value: &serde_json::Value) -> bool {
     matches!(value, serde_json::Value::Null)
@@ -1341,6 +1355,18 @@ mod test {
     fn package_name_eq() {
         let my_package_name = super::PackageName::new("my_package");
         assert_eq!(my_package_name, "my_package");
+    }
+
+    #[test]
+    fn package_id_from_str() {
+        let id = super::PackageId::from("my-package 1.0.0 (path+file:///foo)");
+        assert_eq!(id.repr, "my-package 1.0.0 (path+file:///foo)");
+    }
+
+    #[test]
+    fn package_id_from_string() {
+        let id = super::PackageId::from(String::from("my-package 1.0.0 (path+file:///foo)"));
+        assert_eq!(id.repr, "my-package 1.0.0 (path+file:///foo)");
     }
 
     #[test]
