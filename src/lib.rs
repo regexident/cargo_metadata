@@ -173,6 +173,18 @@ macro_rules! str_newtype {
             }
         }
 
+        impl From<String> for $name<String> {
+            fn from(value: String) -> Self {
+                Self::new(value)
+            }
+        }
+
+        impl<'a> From<&'a str> for $name<String> {
+            fn from(value: &'a str) -> Self {
+                Self::new(value.to_owned())
+            }
+        }
+
         impl<'de, T: AsRef<str> + serde::Deserialize<'de>> serde::Deserialize<'de> for $name<T> {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1329,5 +1341,29 @@ mod test {
     fn package_name_eq() {
         let my_package_name = super::PackageName::new("my_package");
         assert_eq!(my_package_name, "my_package");
+    }
+
+    #[test]
+    fn package_name_from_str() {
+        let name = super::PackageName::from("my-package");
+        assert_eq!(name, "my-package");
+    }
+
+    #[test]
+    fn package_name_from_string() {
+        let name = super::PackageName::from(String::from("my-package"));
+        assert_eq!(name, "my-package");
+    }
+
+    #[test]
+    fn feature_name_from_str() {
+        let name = super::FeatureName::from("default");
+        assert_eq!(name, "default");
+    }
+
+    #[test]
+    fn feature_name_from_string() {
+        let name = super::FeatureName::from(String::from("default"));
+        assert_eq!(name, "default");
     }
 }
