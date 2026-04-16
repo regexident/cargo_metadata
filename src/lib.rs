@@ -414,6 +414,12 @@ impl core::ops::Deref for WorkspaceDefaultMembers {
     }
 }
 
+impl From<Vec<PackageId>> for WorkspaceDefaultMembers {
+    fn from(members: Vec<PackageId>) -> Self {
+        Self(Some(members))
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "builder", derive(Builder))]
 #[non_exhaustive]
@@ -1355,6 +1361,14 @@ mod test {
     fn package_name_eq() {
         let my_package_name = super::PackageName::new("my_package");
         assert_eq!(my_package_name, "my_package");
+    }
+
+    #[test]
+    fn workspace_default_members_from_vec() {
+        let id = super::PackageId::from("my-package 1.0.0 (path+file:///foo)");
+        let members = super::WorkspaceDefaultMembers::from(vec![id.clone()]);
+        assert!(members.is_available());
+        assert_eq!(&*members, &[id]);
     }
 
     #[test]
